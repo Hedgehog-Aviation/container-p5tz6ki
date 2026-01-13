@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    "git-tag",
+    "all-contributors",
+    "first-time-contributor",
+    "released"
+  ],
+  "owner": "Hedgehog-Aviation",
+  "repo": "container-p5tz6ki",
+  "name": "Hedgehog-Aviation",
+  "email": "handybluehedgehog@gmail.com",
+}
