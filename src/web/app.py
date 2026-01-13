@@ -145,8 +145,10 @@ def run_discord():
 # =====================
 # MAIN
 # =====================
+# =====================
+# MAIN
+# =====================
 if __name__ == "__main__":
-    # Start Discord bot in a background thread
     threading.Thread(target=run_discord, daemon=True).start()
-    # Start Flask app
-    app.run(debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 8080))  # cloud hosting will set PORT
+    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
