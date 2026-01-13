@@ -19,13 +19,24 @@ def get_env_int(name: str) -> int:
     except ValueError:
         raise RuntimeError(f"Environment variable {name} must be an integer, got: {val}")
 
+# Discord integration is optional - if token is missing, Discord features will be disabled
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
-if not DISCORD_TOKEN:
-    raise RuntimeError("Environment variable DISCORD_TOKEN is missing! Add it to GitHub Secrets.")
+DISCORD_ENABLED = bool(DISCORD_TOKEN)
 
-GUILD_ID = get_env_int("GUILD_ID")
-CHANNEL_ID = get_env_int("CHANNEL_ID")
-ROLE_ID = get_env_int("ROLE_ID")
+# These are only required when Discord is enabled
+GUILD_ID = None
+CHANNEL_ID = None
+ROLE_ID = None
+
+if DISCORD_ENABLED:
+    try:
+        GUILD_ID = get_env_int("GUILD_ID")
+        CHANNEL_ID = get_env_int("CHANNEL_ID")
+        ROLE_ID = get_env_int("ROLE_ID")
+    except RuntimeError as e:
+        print(f"WARNING: Discord token provided but configuration incomplete: {e}")
+        print("Discord integration will be disabled.")
+        DISCORD_ENABLED = False
 
 # =====================
 # APP STATE
@@ -81,10 +92,19 @@ def index():
 # =====================
 # DISCORD BOT
 # =====================
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
+# Only initialize Discord client if Discord is enabled
+client = None
+monitor_vatsim = None
+
+if DISCORD_ENABLED:
+    intents = discord.Intents.default()
+    client = discord.Client(intents=intents)
 
 async def send_ping(message: str):
+    if not DISCORD_ENABLED or client is None:
+        log("Discord integration disabled - message not sent")
+        return
+    
     try:
         guild = await client.fetch_guild(GUILD_ID)
         channel = await guild.fetch_channel(CHANNEL_ID)
@@ -95,60 +115,67 @@ async def send_ping(message: str):
     except Exception as e:
         log(f"ERROR sending Discord message: {e}")
 
-@tasks.loop(seconds=5)  # 5-second polling for near real-time updates
-async def monitor_vatsim():
-    await client.wait_until_ready()
-    log("monitor_vatsim tick")
+if DISCORD_ENABLED:
+    @tasks.loop(seconds=5)  # 5-second polling for near real-time updates
+    async def monitor_vatsim():
+        await client.wait_until_ready()
+        log("monitor_vatsim tick")
 
-    try:
-        response = requests.get("https://data.vatsim.net/v3/vatsim-data.json", timeout=10)
-        data = response.json()
+        try:
+            response = requests.get("https://data.vatsim.net/v3/vatsim-data.json", timeout=10)
+            data = response.json()
 
-        controllers = data.get("controllers", [])
-        if not isinstance(controllers, list):
-            log("WARNING: VATSIM 'controllers' key is missing or invalid")
-            controllers = []
+            controllers = data.get("controllers", [])
+            if not isinstance(controllers, list):
+                log("WARNING: VATSIM 'controllers' key is missing or invalid")
+                controllers = []
 
-        online_callsigns = {ctrl.get("callsign") for ctrl in controllers if "callsign" in ctrl}
+            online_callsigns = {ctrl.get("callsign") for ctrl in controllers if "callsign" in ctrl}
 
-        for station in monitored_stations:
-            is_online = station in online_callsigns
-            was_online = station_status.get(station, False)
+            for station in monitored_stations:
+                is_online = station in online_callsigns
+                was_online = station_status.get(station, False)
 
-            if is_online and not was_online:
-                await send_ping(f"🟢 **{station}** is now ONLINE")
-                log(f"{station} logged ON")
-            elif not is_online and was_online:
-                await send_ping(f"🔴 **{station}** is now OFFLINE")
-                log(f"{station} logged OFF")
+                if is_online and not was_online:
+                    await send_ping(f"🟢 **{station}** is now ONLINE")
+                    log(f"{station} logged ON")
+                elif not is_online and was_online:
+                    await send_ping(f"🔴 **{station}** is now OFFLINE")
+                    log(f"{station} logged OFF")
 
-            station_status[station] = is_online
+                station_status[station] = is_online
 
-    except Exception as e:
-        log(f"ERROR in VATSIM section: {e}")
+        except Exception as e:
+            log(f"ERROR in VATSIM section: {e}")
 
-    # Debug mode always fires every 5 seconds
-    if debug_mode:
-        await send_ping("🧪 Debug mode test ping")
-        log("Debug ping sent")
+        # Debug mode always fires every 5 seconds
+        if debug_mode:
+            await send_ping("🧪 Debug mode test ping")
+            log("Debug ping sent")
 
-@client.event
-async def on_ready():
-    log(f"Discord bot connected as {client.user}")
-    if not monitor_vatsim.is_running():
-        monitor_vatsim.start()
-        log("monitor_vatsim task started")
+    @client.event
+    async def on_ready():
+        log(f"Discord bot connected as {client.user}")
+        if not monitor_vatsim.is_running():
+            monitor_vatsim.start()
+            log("monitor_vatsim task started")
 
-def run_discord():
-    client.run(DISCORD_TOKEN)
+    def run_discord():
+        client.run(DISCORD_TOKEN)
 
-# =====================
-# MAIN
-# =====================
 # =====================
 # MAIN
 # =====================
 if __name__ == "__main__":
-    threading.Thread(target=run_discord, daemon=True).start()
+    # Log startup configuration
+    if DISCORD_ENABLED:
+        log("🟢 Discord integration ENABLED - notifications will be sent")
+    else:
+        log("🔴 Discord integration DISABLED - DISCORD_TOKEN not configured")
+    
+    # Only start Discord bot if enabled
+    if DISCORD_ENABLED:
+        threading.Thread(target=run_discord, daemon=True).start()
+    
     port = int(os.environ.get("PORT", 8080))  # cloud hosting will set PORT
     app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
