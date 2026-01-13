@@ -1,5 +1,36 @@
 # Go forth and build! 🚀
 
+## Environment Variables 🔐
+
+This application uses environment variables for configuration. For local development, you can create a `.env` file based on the provided `.env.example` template:
+
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
+
+### Required Environment Variables
+
+None! The application will start successfully without any environment variables set.
+
+### Optional Environment Variables
+
+#### Discord Integration (Optional)
+If you want Discord notifications for VATSIM controller status changes, set these in GitHub Secrets or your deployment platform:
+
+- `DISCORD_TOKEN` - Discord bot token (get from [Discord Developer Portal](https://discord.com/developers/applications))
+- `GUILD_ID` - Your Discord server ID (numeric)
+- `CHANNEL_ID` - Channel ID for notifications (numeric)
+- `ROLE_ID` - Role ID to mention in notifications (numeric)
+
+**Note:** If `DISCORD_TOKEN` is not set, the application will start normally but Discord notifications will be disabled. All four Discord variables must be set for Discord integration to work.
+
+#### Other Variables
+- `PORT` - Application port (default: 8080, automatically set by cloud hosting)
+- `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
+- `DATABASE_URL` - Database connection string
+- `DB_*` - Various database configuration options (see `.env.example`)
+
 ## Tutorial: How to make your first commit 📹:
 
 This video example shows how to:
