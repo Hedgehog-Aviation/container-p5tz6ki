@@ -8,15 +8,24 @@ from discord.ext import tasks
 from discord.errors import Forbidden
 
 # =====================
-# READ SECRETS FROM ENVIRONMENT
+# READ SECRETS FROM ENVIRONMENT (GitHub-ready)
 # =====================
-DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
-GUILD_ID = int(os.environ.get("GUILD_ID"))
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID"))
-ROLE_ID = int(os.environ.get("ROLE_ID"))
+def get_env_int(name: str) -> int:
+    val = os.environ.get(name)
+    if val is None:
+        raise RuntimeError(f"Environment variable {name} is missing! Make sure it's in GitHub Secrets.")
+    try:
+        return int(val)
+    except ValueError:
+        raise RuntimeError(f"Environment variable {name} must be an integer, got: {val}")
 
-if not all([DISCORD_TOKEN, GUILD_ID, CHANNEL_ID, ROLE_ID]):
-    raise RuntimeError("One or more required environment variables are missing!")
+DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
+if not DISCORD_TOKEN:
+    raise RuntimeError("Environment variable DISCORD_TOKEN is missing! Add it to GitHub Secrets.")
+
+GUILD_ID = get_env_int("GUILD_ID")
+CHANNEL_ID = get_env_int("CHANNEL_ID")
+ROLE_ID = get_env_int("ROLE_ID")
 
 # =====================
 # APP STATE
@@ -46,8 +55,9 @@ def index():
     if request.method == "POST":
         if "add_station" in request.form:
             station = request.form["station"].upper().strip()
-            monitored_stations.add(station)
-            log(f"Started monitoring {station}")
+            if station:
+                monitored_stations.add(station)
+                log(f"Started monitoring {station}")
 
         elif "remove_station" in request.form:
             station = request.form["remove_station"]
@@ -74,28 +84,24 @@ def index():
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
-async def send_ping(message):
+async def send_ping(message: str):
     try:
         guild = await client.fetch_guild(GUILD_ID)
         channel = await guild.fetch_channel(CHANNEL_ID)
         await channel.send(f"<@&{ROLE_ID}> {message}")
         log("Discord message sent")
-
     except Forbidden:
         log("ERROR: Discord Forbidden (missing permissions)")
     except Exception as e:
         log(f"ERROR sending Discord message: {e}")
 
-@tasks.loop(seconds=7)  # fast polling
+@tasks.loop(seconds=5)  # 5-second polling for near real-time updates
 async def monitor_vatsim():
     await client.wait_until_ready()
     log("monitor_vatsim tick")
 
     try:
-        response = requests.get(
-            "https://data.vatsim.net/v3/vatsim-data.json",
-            timeout=10
-        )
+        response = requests.get("https://data.vatsim.net/v3/vatsim-data.json", timeout=10)
         data = response.json()
 
         controllers = data.get("controllers", [])
@@ -112,7 +118,6 @@ async def monitor_vatsim():
             if is_online and not was_online:
                 await send_ping(f"🟢 **{station}** is now ONLINE")
                 log(f"{station} logged ON")
-
             elif not is_online and was_online:
                 await send_ping(f"🔴 **{station}** is now OFFLINE")
                 log(f"{station} logged OFF")
@@ -122,6 +127,7 @@ async def monitor_vatsim():
     except Exception as e:
         log(f"ERROR in VATSIM section: {e}")
 
+    # Debug mode always fires every 5 seconds
     if debug_mode:
         await send_ping("🧪 Debug mode test ping")
         log("Debug ping sent")
@@ -129,7 +135,6 @@ async def monitor_vatsim():
 @client.event
 async def on_ready():
     log(f"Discord bot connected as {client.user}")
-
     if not monitor_vatsim.is_running():
         monitor_vatsim.start()
         log("monitor_vatsim task started")
@@ -141,5 +146,7 @@ def run_discord():
 # MAIN
 # =====================
 if __name__ == "__main__":
+    # Start Discord bot in a background thread
     threading.Thread(target=run_discord, daemon=True).start()
+    # Start Flask app
     app.run(debug=True, use_reloader=False)
