@@ -94,11 +94,6 @@ def index():
 # =====================
 # Only initialize Discord client if Discord is enabled
 client = None
-monitor_vatsim = None
-
-if DISCORD_ENABLED:
-    intents = discord.Intents.default()
-    client = discord.Client(intents=intents)
 
 async def send_ping(message: str):
     if not DISCORD_ENABLED or client is None:
@@ -116,6 +111,9 @@ async def send_ping(message: str):
         log(f"ERROR sending Discord message: {e}")
 
 if DISCORD_ENABLED:
+    intents = discord.Intents.default()
+    client = discord.Client(intents=intents)
+    
     @tasks.loop(seconds=5)  # 5-second polling for near real-time updates
     async def monitor_vatsim():
         await client.wait_until_ready()
