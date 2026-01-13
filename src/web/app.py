@@ -34,6 +34,7 @@ if DISCORD_ENABLED:
         CHANNEL_ID = get_env_int("CHANNEL_ID")
         ROLE_ID = get_env_int("ROLE_ID")
     except RuntimeError as e:
+        # Use print here since log() function is not yet defined
         print(f"WARNING: Discord token provided but configuration incomplete: {e}")
         print("Discord integration will be disabled.")
         DISCORD_ENABLED = False
