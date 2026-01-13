@@ -19,6 +19,10 @@ jobs:
       SSH_CONFIG_FILE: /dev/null
       AMBER_SECRET: ${{ secrets.AMBER_SECRET }}
       DOKKU_SSH_PRIVATE_KEY: ${{ secrets.DOKKU_SSH_PRIVATE_KEY}}
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+      ROLE_ID: ${{ secrets.ROLE_ID }}
+      GUILD_ID: ${{ secrets.GUILD_ID }}
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server."
