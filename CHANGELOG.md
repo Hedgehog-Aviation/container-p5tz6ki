@@ -1,3 +1,15 @@
+# v0.0.3 (Tue Jan 13 2026)
+
+#### 🐛 Bug Fix
+
+- Atcbot1 [#1](https://github.com/Hedgehog-Aviation/container-p5tz6ki/pull/1) ([@Hedgehog-Aviation](https://github.com/Hedgehog-Aviation))
+
+#### Authors: 1
+
+- [@Hedgehog-Aviation](https://github.com/Hedgehog-Aviation)
+
+---
+
 # v0.0.2 (Tue Jan 13 2026)
 
 #### ⚠️ Pushed to `main`
