@@ -1,10 +1,62 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VATSIM ATC Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: #eee;
+        }
+        h1 { color: #00ff00; }
+        button { margin: 5px; padding: 5px 10px; }
+        input { padding: 5px; }
+        .log {
+            background: #000;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            font-family: monospace;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
 
+<h1>VATSIM ATC Monitor</h1>
 
-{% block header %}
-    Header
-{% endblock header %}
+<h2>Monitored Stations</h2>
+<ul>
+    {% for station in stations %}
+        <li>
+            {{ station }}
+            <form style="display:inline" method="POST">
+                <button name="remove_station" value="{{ station }}">Remove</button>
+            </form>
+        </li>
+    {% else %}
+        <li>No stations monitored</li>
+    {% endfor %}
+</ul>
 
-{% block content %}
-    Content - initial deploy test
-{% endblock %}
+<form method="POST">
+    <input name="station" placeholder="e.g. KJFK_TWR" required>
+    <button name="add_station">Add Station</button>
+</form>
+
+<h2>Debug Mode</h2>
+<form method="POST">
+    <button name="toggle_debug">
+        {{ "Disable" if debug_mode else "Enable" }} Debug Mode
+    </button>
+</form>
+
+<h2>Logs</h2>
+<div class="log">
+    {% for line in logs %}
+        {{ line }}<br>
+    {% endfor %}
+</div>
+
+</body>
+</html>
